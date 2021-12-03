@@ -1,0 +1,332 @@
+---
+title: "R Notebook"
+output: html_notebook
+author: "Kevin Kirotich"
+---
+
+You are a Data analyst at Carrefour Kenya and are currently undertaking a project that will inform the marketing department on the most relevant marketing strategies that will result in the highest no. of sales (total price including tax). Your project has been divided into four parts where you'll explore a recent marketing dataset by performing various unsupervised learning techniques and later providing recommendations based on your insights.
+
+
+
+```{r}
+install.packages("data.table")
+install.packages("tidyverse")
+install.packages("lubridate") 
+install.packages('cutr')
+install.packages('modeest')
+install.packages('moments')
+install.packages('janitor')
+install.packages('ggcorrplot')
+install.packages('caret')
+install.packages('arules')
+install.packages("anomalize")
+install.packages('tibbletime')
+install.packages('timetk')
+install.packages("arulesViz")
+install.packages("dplyr")
+install.packages("tibble")
+install.packages("tibbletime")
+install.packages('dummies')
+install.packages('devtools')
+install.packages("grid")
+install.packages("reshape2")
+install.packages("plyr")
+install.packages("scales")
+install.packages("ggplot2")
+
+install.packages("corrplot")
+
+```
+
+```{r}
+library(ggplot2)
+library(reshape2)
+library(plyr)
+library(grid)
+library(scales)
+library(corrplot)
+library(devtools)
+```
+
+
+```{r}
+library("data.table")
+library("tidyverse")
+library('lubridate')
+library("modeest")
+library("moments")
+library("janitor")
+library(ggcorrplot)
+library('caret')
+library('arules')
+library('anomalize')
+library('tibbletime')
+library('timetk')
+library('arulesViz')
+require('dplyr')
+library('dummies')
+library('devtools')
+library(dplyr)
+
+```
+
+##2. Reading and checking of data
+```{r}
+library(readr)
+
+#Reading data
+Sales <- read.csv('http://bit.ly/CarreFourDataset')
+head(Sales)
+
+```
+
+```{r}
+#Checking the dimensions of the dataset
+
+dim(Sales)
+```
+
+```{r}
+#Check the summary of  numerical columns
+
+summary(Sales)
+```
+Data Cleaning 
+```{r}
+#Convert column names to lowercase
+names(Sales)<- tolower(names(Sales))
+head(Sales) 
+```
+
+```{r}
+#Checking for missing values in the columns of our dataset
+
+
+colSums(is.na(Sales))
+
+```
+There is no missing data in any column
+
+```{r}
+anyDuplicated(Sales)
+```
+There is no  duplicated values in our dataset
+```{r}
+# obtaining numerical columns
+numeric_columns <- unlist(lapply(Sales, is.numeric))
+# Store in a dataframe
+columns_numeric <- Sales[ , numeric_columns]
+head(columns_numeric)
+```
+
+```{r}
+# We will use a for loop to iterate through our numerical values
+par ( mfrow= c (  2, 4 ))
+for (i in 1 : length (columns_numeric)) {
+boxplot (columns_numeric[,i], main= names (columns_numeric[i]), type= "l" , height = 200, width = 110)}
+```
+There are outliers in tax, gross.income, cogs,  and total.   
+We wont remove outliers for now because it might cause inaccuracy in our data 
+some outliers like expected like in gross income
+```{r}
+lengths(lapply(Sales, unique))
+```
+
+ 
+ Univariate analysis
+ Measure of Central Tendancy
+
+```{r}
+#Create a dataframe to store our numerical variables
+library(moments)
+stats <- data.frame(
+  Mean = apply(columns_numeric, 2, mean), 
+  Median = apply(columns_numeric, 2, median), 
+  Min = apply(columns_numeric, 2, min),  
+  Max = apply(columns_numeric, 2, max),    
+  Variance= apply(columns_numeric, 2, var),  
+  Std = apply(columns_numeric, 2, sd),
+  Skewness = apply(columns_numeric, 2, skewness), 
+  Kurtosis = apply(columns_numeric, 2, kurtosis)) 
+
+# round off the values to 2 decimal places and display the data1frame
+stats <- round(stats, 2)
+stats
+```
+Plots
+```{r}
+
+# We will use ggplot to display our plots
+library(dplyr)
+library(ggplot2)
+options(repr.plot.width = 8, repr.plot.height = 6)
+p = Sales %>% ggplot(aes(x = unit.price ))
+
+p + geom_histogram(color="lightgray", fill="seagreen", binwidth = 10) +
+    labs(title = "Distribution of Unit Price", x = "unit price", y = "Frequency") +
+    theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size=16),
+          plot.title = element_text(hjust = 0.5, size = 20))
+
+```
+```{r}
+
+# plot a histogram to visualize the distribution of values in 'quantity' column
+
+options(repr.plot.width = 8, repr.plot.height = 6)
+p = Sales %>% ggplot(aes(x = quantity ))
+
+p + geom_histogram(color="lightgray", fill="magenta", binwidth = 1) +
+    labs(title = "Distribution of Quantity", x = "quantity", y = "Frequency") +
+    theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size=16),
+          plot.title = element_text(hjust = 0.5, size = 20))
+
+```
+
+```{r}
+
+# plot a histogram to visualize the distribution of values in 'cogs' column
+
+options(repr.plot.width = 8, repr.plot.height = 6)
+p = Sales %>% ggplot(aes(x = cogs ))
+
+p + geom_histogram(color="lightgray", fill="cyan", binwidth = 100) +
+    labs(title = "Distribution of Cogs", x = "cogs", y = "Frequency") +
+      theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size=16),
+          plot.title = element_text(hjust = 0.5, size = 20))
+```
+Bivariate Analysis
+
+```{r}
+#correlation
+library(ggcorrplot)
+ggcorrplot(cor(columns_numeric))
+```
+ 
+From the correlation we find that:
+unit price is highly positively correlated to the total price
+Tax is highly positively correlated to cogs
+
+
+
+
+
+PCA
+
+```{r}
+df<- columns_numeric[,c(1,2,3,4,6,7,8)]
+head(df)
+
+```
+
+```{r}
+#we use prcomp method to perform PCA
+Sales.pca <- prcomp(df, center = TRUE, scale. = TRUE)
+summary(Sales.pca)
+
+```
+We see that PC1 accounts for 70% of the total variance
+PC2 accounts for 14% of the total variance
+
+```{r}
+#Check nature of our data
+str(Sales.pca)
+```
+
+```{r}
+library(biplotbootGUI)
+library(BiplotGUI)
+library(BiplotML)
+plot(Sales.pca)
+biplot(Sales.pca)
+```
+Wrapper method
+```{r}
+# importing required libraries
+install.packages("clustvarsel")
+library(clustvarsel)
+install.packages("mclust")
+library(mclust)
+```
+
+```{r}
+# Sequential forward greedy search (default)
+library(clustvarsel)
+clustvarsel(columns_numeric)
+```
+
+
+
+
+Conclusions
+
+PC1, PC2, PC3, and PC4 were able to account for 99.96 percent of the total variance hece the are important. The rest should be dropped
+
+the gross income, unit price, quantity and rating columns are important because they explain the variance in the data. This Should be used for modelling
+
+
+
+Feature Selection
+This section requires you to perform feature selection through the use of the unsupervised learning methods and perform your analysis and provide insights on the features that contribute the most information to the dataset.
+```{r}
+library(caret)
+```
+```{r}
+
+#Converting to factors 
+Sales$branch <- (as.integer(as.factor(Sales$branch)))
+Sales$customer.type <- (as.integer(as.factor(Sales$customer.type)))
+Sales$gender <- (as.integer(as.factor(Sales$gender)))
+Sales$product.line <- (as.integer(as.factor(Sales$product.line)))
+Sales$payment <- (as.integer(as.factor(Sales$payment)))
+
+head(Sales)
+```
+
+```{r}
+## selecting numerical columns
+numeric_columns <- unlist(lapply(Sales, is.numeric))
+columns_numeric <- Sales[ , numeric_columns]
+head(columns_numeric)
+```
+```{r}
+#correlation matrix
+
+correlationMatrix <- cor(columns_numeric)
+
+highlyCorrelated <- findCorrelation(correlationMatrix, cutoff=0.75)
+
+highlyCorrelated
+
+names(columns_numeric[,highlyCorrelated])
+```
+```{r}
+sales2
+```
+
+
+```{r}
+# Removing Redundant Features 
+
+sales2 <- subset(Sales, select = -c(cogs,  total, tax))
+
+library(corrplot)
+par(mfrow = c(1, 2))
+corrplot(correlationMatrix, order = "hclust")
+corrplot(cor(sales2), order = "hclust")
+```
+```{r}
+ class(sales2)
+```
+
+
+```{r}
+# plotting
+
+par(mfrow = c(1, 2))
+corrplot(correlationMatrix, order = "hclust")
+corrplot(cor(df1), order = "hclust")
+```
+

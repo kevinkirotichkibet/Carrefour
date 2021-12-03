@@ -1,0 +1,88 @@
+---
+title: "R Notebook"
+output: html_notebook
+author: "Kevin Kirotich"
+---
+```{r}
+
+#install arules library 
+
+install.packages("arules")
+```
+
+```{r}
+
+# Loading the arules library
+library(arules)
+```
+
+```{r}
+
+# Loading our  dataset
+path <-"http://bit.ly/SupermarketDatasetII"
+
+house<-read.transactions(path, sep = ",")
+house
+head(house)
+tail(house)
+
+
+```
+```{r}
+#Check dimension
+
+dim(house)
+```
+
+
+```{r}
+# Verifying the object's class
+class(house)
+```
+```{r}
+# Previewing our first 5 transactions
+inspect(house[1:5])
+```
+```{r}
+#Preview the items in our dataset,
+items<-as.data.frame(itemLabels(house))
+colnames(items) <- "Item"
+head(items, 10)
+```
+
+```{r}
+#Checking on summary statistics of numeric variables
+
+summary(house)
+```
+```{r}
+# Checking the frequency of items
+itemFrequency(house[, 2:10],type = "absolute")
+round(itemFrequency(house[, 4:10],type = "relative")*100,2)
+```
+
+```{r}
+#Plotting the frequency of the first 30 items
+houses <- as(house, "transactions")
+# plot item frequency
+itemFrequencyPlot(houses,topN=30,type="absolute")
+```
+Mineral water, spaghetti, eggs, chocolate, frenh fries, green tea and milk are frewuetly bought items. Salmon, Fresh bread and champagne  are the lowest
+```{r}
+rules <- apriori (house, parameter = list(supp = 0.001, conf = 0.8))
+```
+```{r}
+# Building apriori models altering support and confidence values
+rule_2 <- apriori (house,parameter = list(supp = 0.002, conf = 0.8)) 
+rule_3 <- apriori (house, parameter = list(supp = 0.001, conf = 0.6)) 
+rule_2
+rule_3
+```
+```{r}
+inspect(rules[1:15])
+```
+```{r}
+rules<-sort(rules, by="confidence", decreasing=TRUE)
+inspect(rules[1:20])
+```
+When person buys cake,meatballs  and mineral water they are most likely to buy milk

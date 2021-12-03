@@ -1,0 +1,116 @@
+---
+title: "R Notebook"
+output: html_notebook
+author: "Kevin Kirotich"
+---
+
+
+
+```{r}
+library(readr)
+
+#Loading our Dataset
+data <- read.csv('http://bit.ly/CarreFourSalesDataset')
+head(data)
+tail(data)
+
+```
+
+
+
+```{r}
+# Check the dimension of our data
+dim(data)
+```
+We have 1000 rows and 2 columns
+```{r}
+# Viewing data types using str().
+str(data)
+```
+
+```{r}
+summary(data)
+```
+
+
+
+
+Data Cleaning 
+```{r}
+#Convert column names to lowercase
+names(data)<- tolower(names(data))
+head(data) 
+```
+```{r}
+
+#converting date to date-time format. 
+data$date <- as.Date(data$date, "%m/%d/%y")
+head(data)
+```
+
+
+
+Missing Values
+
+```{r}
+#check for missing values
+colSums(is.na(data))
+
+```
+There is no missing data
+
+
+check for duplicates
+```{r}
+anyDuplicated(data)
+```
+We dont have duplicates in our dataset
+
+Check for outliers
+```{r}
+ggplot(data) +
+  aes(x = "", y = sales) +
+  geom_boxplot(fill = "#0c4c8a") +
+  theme_minimal()
+
+```
+There are a few outliers but we will not drop them
+
+
+```{r}
+# checking  the number of transaction in a day
+install.packages("dplyr")
+library(dplyr)
+df <- data %>% group_by(date) %>% tally()
+colnames(df) <- c('transactionDate', 'totalCount')
+head(df)
+```
+
+
+
+```{r}
+# plot using plot_anomaly_decomposition() to better visualize our data
+library(ggplot2)
+library(anomalize)
+df %>%
+    time_decompose(totalCount) %>%
+    anomalize(remainder) %>%
+    plot_anomaly_decomposition(ncol = 1, alpha_dots = 0.5) +
+    ggtitle("Anomaly Detection Plot")
+```
+These customer transaction has no Anomaly
+
+```{r}
+# ploting the recomposition using time decompose method
+
+df %>%
+    time_decompose(totalCount) %>%
+    anomalize(remainder) %>%
+    time_recompose() %>%
+    plot_anomalies(time_recomposed = TRUE, ncol = 1, alpha_dots = 0.25, fill="seagreen") +
+    ggtitle("Anomalie detection plots")
+```
+Conclusion
+
+There are no anomalies in this dataset
+
